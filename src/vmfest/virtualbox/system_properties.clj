@@ -10,6 +10,10 @@
   (system-properties (.getParent m)))
 
 
+#_(def max-boot-position (ISystemProperties/maxBootPosition))
+#_(defn max-boot-position [] (.maxBootPosition (ISystemProperties.)))
+
+(defn max-boot-position [x]  (.maxBootPosition (system-properties x)))
 
 ;;; bulk definition of getters for properties
 (defn defproperty [fn-name java-method]

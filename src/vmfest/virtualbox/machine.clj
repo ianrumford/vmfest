@@ -4,6 +4,7 @@
             [vmfest.virtualbox.conditions :as conditions]
             [vmfest.virtualbox.model :as model]
             [vmfest.virtualbox.enums :as enums]
+            [vmfest.virtualbox.system-properties :as sysprop]
             [vmfest.virtualbox.session :as session])
   (:use [vmfest.virtualbox.scan-codes :only (scan-codes)])
   (:import [org.virtualbox_4_2 IMachine IConsole VBoxException
@@ -172,29 +173,31 @@
   "Process an entry in the boot-order"
   [seen boot-entry]
   (log/infof "machine/set-boot-order-function: seen %s boot-entry %s" seen boot-entry )
-  (let [[boot-machine [boot-pos boot-device]] boot-entry
+  (let [[boot-machine max-boot-position [boot-pos boot-device]] boot-entry
         boot-position (Integer. boot-pos)
+        boot-device-obj (enums/key-to-device-type boot-device)
         ]
-    (log/infof "machine/set-boot-order-function: boot-position %s boot-device %s" boot-position boot-device)
+    (log/infof "machine/set-boot-order-function: boot-position %s boot-device %s max-boot-position %s" boot-position boot-device max-boot-position)
 
-    (if (instance? Integer boot-position)
-      (if-let [boot-device-obj (enums/key-to-device-type boot-device)]
-        (do
+    (if (and (instance? Integer boot-position) (> boot-position 0) (<= boot-position max-boot-position) boot-device-obj)
+      (do
 
-          (log/infof "machine/set-boot-order-function: setting boot-position %s boot-device %s" boot-position boot-device )
+        (log/infof "machine/set-boot-order-function: setting boot-position %s boot-device %s" boot-position boot-device )
 
-          (.setBootOrder boot-machine  (long boot-position) boot-device-obj)
-          
-          (log/infof "machine/set-boot-order-function: set     boot-position %s boot-device %s" boot-position boot-device )          
+        (.setBootOrder boot-machine  (long boot-position) boot-device-obj)
+        
+        (log/infof "machine/set-boot-order-function: set     boot-position %s boot-device %s" boot-position boot-device )          
 
-          )
-        (log/errorf "machine/set-boot-order-function: boot-position %s boot-device %s not known" boot-position boot-device)
+        (assoc seen boot-position boot-device) ;  update the seen  devices
+        
         )
-      (log/errorf "machine/set-boot-order-function: boot-position %s not an integer" boot-position)
+      (do
+        (log/errorf "machine/set-boot-order-function: boot-device %s boot-position %s max-boot-position %s seen %s irreconcilable" boot-device boot-position max-boot-position seen)
+        seen
+        )
       )
-    
     )
-  seen
+
   )
 
 
@@ -203,7 +206,29 @@
   [boot-order vb-m]
   (log/infof "machine/set-boot-order: boot-order %s" boot-order)
   (if-let [boot-order-seq (seq boot-order)]
-    (reduce #(set-boot-order-function %1 [vb-m %2]) {}  boot-order-seq)
+    (let [max-boot-position ( sysprop/max-boot-position vb-m)
+          boot-order-set (reduce #(set-boot-order-function %1 [vb-m max-boot-position %2]) {}  boot-order-seq)
+          ]
+      
+      (log/infof "machine/set-boot-order: set boot order %s" boot-order-set)
+
+      (let [boot-position-range (range 1 (+ max-boot-position 1))
+            ]
+        (log/infof "machine/set-boot-order: boot position range %s" boot-position-range)
+        (doseq  [boot-position-ordinal boot-position-range]
+           (log/infof "machine/set-boot-order: boot position ordinal %s" boot-position-ordinal)
+          (if-let [boot-device-obj (get  boot-order-set boot-position-ordinal)]
+            ()
+            (do
+              (log/infof "machine/set-boot-order: boot position ordinal %s set to null" boot-position-ordinal)
+              (set-boot-order-function {} [vb-m max-boot-position [boot-position-ordinal :null]])
+              )
+            )
+          )
+        )
+      
+      boot-order-set
+      )
     (log/errorf "machine/set-boot-order: boot-order %s not seqable" boot-order)))
 
 (def setters

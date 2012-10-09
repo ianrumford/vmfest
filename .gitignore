@@ -7,3 +7,5 @@ docs
 .lein*
 log
 src/log4j.xml
+*#
+*~
