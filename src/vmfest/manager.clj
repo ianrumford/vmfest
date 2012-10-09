@@ -22,7 +22,7 @@ machines are stored in ~/.vmfest/nodes ."
             vmfest.virtualbox.medium
             clojure.set)
   (:use [slingshot.slingshot :only [throw+ try+]])
-  (:import [org.virtualbox_4_1
+  (:import [org.virtualbox_4_2
             SessionState
             HostNetworkInterfaceType
             HostNetworkInterfaceStatus]
@@ -45,7 +45,10 @@ machines are stored in ~/.vmfest/nodes ."
 (defn default-node-path
   "Return the default node-path for images"
   [& {:keys [home] :or {home user-home}}]
-  (.getPath (io/file home ".vmfest" "nodes")))
+  (.getPath (io/file home ".vmfest" "nodes"))
+  #_(.getPath (io/file "/mnt/pallet/virtualbox"  "vmfest" "nodes"))  
+
+  )
 
 ;; In the future, vmfest will be able to handle more than just one VM
 ;; host. *locations* will hold the locations. For now, it only holds
@@ -78,7 +81,7 @@ machines are stored in ~/.vmfest/nodes ."
        (format
         "/VirtualBox/GuestInfo/Net/%s/V4/IP"
         slot)))
-    (catch org.virtualbox_4_1.VBoxException e
+    (catch org.virtualbox_4_2.VBoxException e
       (throw (RuntimeException. e)))))
 
 (defn set-extra-data
@@ -277,21 +280,42 @@ VirtualBox"
       (log/warnf "Image not mounted. No mount point found for %s." config)
       config)))
 
-(defn- ensure-image-is-registered [vbox location]
+;; Commented
+#_(defn- ensure-image-is-registered [vbox location]
   "If the medium in the location is not open, it will open it as multi-attach"
   (let [medium
         (vbox/find-medium vbox location :hard-disk)]
+   (log/infof "ENSURE IMAGE IS REGISTERED location %s mediaum %s" location medium)
    (when-not medium
      (log/debugf
       (str "ensure-image-is-registered: %s not registered. Will "
            "attempt at registering if it is a hard drive")
       location)
      (let [medium (vbox/open-medium vbox location :hard-disk :read-only false)]
+       (log/infof "ENSURE IMAGE IS REGSITERED MAKING LOCATION %s MEDIUM %s IMMUTABLE" location medium)
        (image/make-immutable medium)
        (log/debugf
-        "ensure-image-is-registered: hard disk %s successfully registered."
+        "ensure-image-is-registered: hard disk %s successfully registered and immutable / multiattach."
         location)
        medium))))
+
+(defn- ensure-image-is-registered [vbox location]
+  "If the medium in the location is not open, it will open it as multi-attach"
+  (if-let [medium
+           (vbox/find-medium vbox location :hard-disk)]
+    (do
+
+      (log/infof "ENSURE IMAGE IS REGISTERED location %s mediaum %s" location medium)
+      (image/make-immutable medium)
+      (log/debugf
+       "ensure-image-is-registered: hard disk %s successfully registered and immutable / multiattach."
+       location)
+       medium
+      )
+    
+    (throw (Exception. "ENSURE IMAGE IS REGISTERED IMAGE NOT FOUND"))
+
+     ))
 
 (defn create-machine
   [server name os-type-id config image-uuid & [base-folder]]
@@ -371,6 +395,12 @@ VirtualBox"
 (defn instance* [server name image machine & [base-folder]]
     (let [uuid (:uuid image)
           os-type-id (:os-type-id image)]
+      (println "INSTANCE* NAME" name)
+            (println "INSTANCE* UUID" uuid )
+            (println "INSTANCE* OS TYPE ID" os-type-id )
+      (println "INSTANCE* IMAGE" image)
+      (println "INSTANCE* MACHINE" machine)
+      (println "INSTANCE* BASE FOLDER" base-folder)
       (create-machine server name os-type-id machine uuid base-folder)))
 
 (defn instance [server name image-key-or-map machine-key-or-map & [base-folder]]

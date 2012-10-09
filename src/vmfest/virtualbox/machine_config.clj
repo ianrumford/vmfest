@@ -8,7 +8,7 @@
             [clojure.tools.logging :as log]
             [vmfest.virtualbox.virtualbox :as vbox]
             [vmfest.virtualbox.conditions :as conditions])
-  (:import [org.virtualbox_4_1 AccessMode VBoxException NetworkAttachmentType
+  (:import [org.virtualbox_4_2 AccessMode VBoxException NetworkAttachmentType
             HostNetworkInterfaceType]))
 
 (defn get-medium [m {:keys [location device-type create] :as device}]
@@ -214,7 +214,10 @@
         :storage nil ;; ignored. 
         :boot-mount-point nil ;; ignored.
         (if-let [setter (entry machine/setters)]
-          (setter value m)
+          (let [r  (setter value m)]
+            (log/infof "machine_config/configuure-machine: SETTER %s RETRUN %s" entry r)
+            r)
+
           (log/warnf
            "There is no such setting %s in a machine configuration"
            entry)))))

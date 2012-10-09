@@ -1,7 +1,7 @@
 (ns vmfest.virtualbox.guest-os-type
   (:require [vmfest.virtualbox.session :as session]
             [vmfest.virtualbox.model :as model])
-  (:import [org.virtualbox_4_1 IGuestOSType]))
+  (:import [org.virtualbox_4_2 IGuestOSType]))
 
 (defn map-from-IGuestOSType
   [o]

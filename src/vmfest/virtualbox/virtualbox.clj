@@ -4,7 +4,7 @@
             [vmfest.virtualbox.conditions :as conditions]
             [vmfest.virtualbox.enums :as enums]
             vmfest.virtualbox.guest-os-type)
-  (:import [org.virtualbox_4_1
+  (:import [org.virtualbox_4_2
             VirtualBoxManager
             IVirtualBox
             VBoxException]
@@ -33,10 +33,13 @@
     (log/warnf
      "find-medium: medium type %s not in #{:hard-disk :floppy :dvd}" type)
     (let [type-key (or type :hard-disk)
-          type (enums/key-to-device-type type-key)]
-      (try (.findMedium vbox id-or-location type)
-           (catch Exception e
-             (log/warnf "find-medium: location %s not found" id-or-location))))))
+          type (enums/key-to-device-type type-key)
+          access-mode-key :read-only
+          access-mode (enums/key-to-access-mode access-mode-key)
+          ]
+      (try (.openMedium vbox id-or-location type access-mode false)
+        (catch Exception e
+             (log/warnf "find-medium: location %s not found type %s access mode " id-or-location type access-mode))))))
 
 (defn open-medium
   [vbox location & [type access-mode force-new-uuid?]]
@@ -74,7 +77,12 @@ at the specified location."
   ([vbox name os-type-id overwrite base-folder]
      {:pre [(model/IVirtualBox? vbox)]}
      (let [path (when base-folder
-                  (.composeMachineFilename vbox name base-folder))]
+                  (log/infof "CRT MAC X1 BASE_FOLDEF %s" base-folder)
+                  (let [machine-filename  (.composeMachineFilename vbox name "" ""  base-folder)]
+                    (println "CRT MAC MACHINE FILENAME" machine-filename)
+                    machine-filename
+                    ))
+           ]
        (conditions/with-vbox-exception-translation
          {:VBOX_E_OBJECT_NOT_FOUND "invalid os type ID."
           :VBOX_E_FILE_ERROR
@@ -83,11 +91,14 @@ at the specified location."
                " I/O error.")
           :E_INVALIDARG "name is empty or null."}
          (log/infof
-           "create-machine: Creating machine %s in %s, %s overwriting previous contents"
-           name
-           path
-           (if overwrite "" "not"))
-         (.createMachine vbox path name os-type-id nil overwrite)))))
+          "create-machine: Creating machine %s in %s, %s overwriting previous contents"
+          name
+          path
+          (if overwrite "" "not"))
+         (log/infof "CRT MAC X2 PATH %s NAME %s OSTypeID %s" path name os-type-id )         
+         #_(.createMachine vbox path name os-type-id nil overwrite)
+         (.createMachine vbox path name nil os-type-id  "forceOverite=1" )
+         ))))
 
 ;;; DHCP
 

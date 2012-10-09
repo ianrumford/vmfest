@@ -6,8 +6,8 @@
             [vmfest.virtualbox.enums :as enums]
             [vmfest.virtualbox.session :as session])
   (:use [vmfest.virtualbox.scan-codes :only (scan-codes)])
-  (:import [org.virtualbox_4_1 IMachine IConsole VBoxException
-            VirtualBoxManager IVirtualBox IMedium NetworkAttachmentType]
+  (:import [org.virtualbox_4_2 IMachine IConsole VBoxException
+            VirtualBoxManager IVirtualBox IMedium NetworkAttachmentType ClipboardMode]
            [vmfest.virtualbox.model GuestOsType Machine]))
 
 
@@ -34,9 +34,9 @@
    :firmware-type #(enums/firmware-type-to-key
                    (.getFirmwareType %)) ;todo: get object
    :pointing-hid-type #(enums/pointing-hid-type-to-key
-                       (.getPointingHidType %)) ;todo: get object
+                       (.getPointingHIDType %)) ;todo: get object
    :keyboard-hid-type #(enums/keyboard-hid-type-to-key
-                       (.getKeyboardHidType %)) ;todo: get object
+                       (.getKeyboardHIDType %)) ;todo: get object
    :hpet-enabled #(.getHpetEnabled %)
    :snapshot-folder #(.getSnapshotFolder %)
    :vrde-server #(.getVRDEServer %) ;todo: get object
@@ -104,9 +104,9 @@
    :firmware-type (enums/firmware-type-to-key
                    (.getFirmwareType vb-m)) ;todo: get object
    :pointing-hid-type (enums/pointing-hid-type-to-key
-                       (.getPointingHidType vb-m)) ;todo: get object
+                       (.getPointingHIDType vb-m)) ;todo: get object
    :keyboard-hid-type (enums/keyboard-hid-type-to-key
-                       (.getKeyboardHidType vb-m)) ;todo: get object
+                       (.getKeyboardHIDType vb-m)) ;todo: get object
    :hpet-enabled (.getHpetEnabled vb-m)
    :snapshot-folder (.getSnapshotFolder vb-m)
    :vrde-server (.getVRDEServer vb-m) ;todo: get object
@@ -145,6 +145,67 @@
    ;;   :io-bandwidth-max (.getIoBandwidthMax vb-m)
    })
 
+
+(defn set-clipboard-mode
+  "Sets the clipboard mode"
+  [clip-mode vb-m]
+  (log/infof "machine/set-clipboard-mode: SET CLIPBOARD MODE mode %s machine %s." clip-mode vb-m)
+  (cond
+   (instance? ClipboardMode clip-mode) (.setClipboardMode vb-m  clip-mode )
+
+   (instance? clojure.lang.Keyword clip-mode)
+   (if-let [clip-mode-obj (enums/key-to-clipboard-mode clip-mode)]
+     (do
+       (log/infof "machine/set-clipboard-mode: setting clipboard to %s mode %s" clip-mode clip-mode-obj)
+       (.setClipboardMode vb-m  clip-mode-obj)
+       (log/infof "machine/set-clipboard-mode: set     clipboard to %s mode %s" clip-mode clip-mode-obj)
+       )
+     (log/errorf "machine/set-clipboard-mode: clip-mode %s not recognised" clip-mode)
+     )
+   
+   :else (throw (RuntimeException.
+                 (format
+                  "machine/set-clipboard-mode: clip-mode unexpected: %s."
+                  clip-mode)))))
+
+(defn set-boot-order-function
+  "Process an entry in the boot-order"
+  [seen boot-entry]
+  (log/infof "machine/set-boot-order-function: seen %s boot-entry %s" seen boot-entry )
+  (let [[boot-machine [boot-pos boot-device]] boot-entry
+        boot-position (Integer. boot-pos)
+        ]
+    (log/infof "machine/set-boot-order-function: boot-position %s boot-device %s" boot-position boot-device)
+
+    (if (instance? Integer boot-position)
+      (if-let [boot-device-obj (enums/key-to-device-type boot-device)]
+        (do
+
+          (log/infof "machine/set-boot-order-function: setting boot-position %s boot-device %s" boot-position boot-device )
+
+          (.setBootOrder boot-machine  (long boot-position) boot-device-obj)
+          
+          (log/infof "machine/set-boot-order-function: set     boot-position %s boot-device %s" boot-position boot-device )          
+
+          )
+        (log/errorf "machine/set-boot-order-function: boot-position %s boot-device %s not known" boot-position boot-device)
+        )
+      (log/errorf "machine/set-boot-order-function: boot-position %s not an integer" boot-position)
+      )
+    
+    )
+  seen
+  )
+
+
+(defn set-boot-order
+  "Sets the boot order"
+  [boot-order vb-m]
+  (log/infof "machine/set-boot-order: boot-order %s" boot-order)
+  (if-let [boot-order-seq (seq boot-order)]
+    (reduce #(set-boot-order-function %1 [vb-m %2]) {}  boot-order-seq)
+    (log/errorf "machine/set-boot-order: boot-order %s not seqable" boot-order)))
+
 (def setters
   {:name #(.setName %2 %1)
    :description #(.setDescription %2 %1)
@@ -161,11 +222,13 @@
    :accelerate-2d-enabled? #(.setAccelerate2DEnabled %2 %1)
    :monitor-count #(.setMonitorCount %2 (long %1))
    :firmware-type #(.setFirmwareType %2 %1)
-   :pointing-hid-type #(.setPointingHidType %2 %1)
-   :keyboard-hid-type #(.setKeyboardHidType %2 %1)
+   :pointing-hid-type #(.setPointingHIDType %2 %1)
+   :keyboard-hid-type #(.setKeyboardHIDType %2 %1)
    :hpet-enabled #(.setHpetEnabled %2 %1)
    :snapshot-folder #(.setSnapshotFolder %2 %1)
-   :clipboard-mode #(.setClipboardMode %2 %1)
+   ;;:clipboard-mode #(.setClipboardMode %2 (enums/key-to-clipboard-mode %1))
+   :clipboard-mode #(set-clipboard-mode %1  %2 )
+   :boot-order  #(set-boot-order %1  %2 )
    :teleporter-enabled? #(.setTeleporterEnabled %2 %1)
    :guest-property-notification-patters
    #(.setGuestPropertyNotificationPatterns %2 %1)
