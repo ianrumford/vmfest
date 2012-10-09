@@ -231,6 +231,15 @@
       )
     (log/errorf "machine/set-boot-order: boot-order %s not seqable" boot-order)))
 
+(defn set-rtc-clock-utc
+  "Sets real time clock to UTC c.f. lcoal time"
+  [want-utc vb-m]
+  (let [want-utc-bool (true? want-utc)]
+    (log/infof "machine/set-rtc-clock-utc: want-rtc? %s %s" want-utc-bool want-utc)
+    (.setRTCUseUTC vb-m want-utc-bool)
+    )
+  )
+
 (def setters
   {:name #(.setName %2 %1)
    :description #(.setDescription %2 %1)
@@ -263,6 +272,7 @@
    :rtc-use-utc? #(.setRTCUseUTC %2 %1)
    :io-cache-enabled? #(.setIoCacheEnabled %2 %1)
    :io-cache-size #(.setIoCacheSize %2 (long %1))
+   :utc-time  #(set-rtc-clock-utc %1 %2)
    ;;   :io-bandwidth-max #(.setIoBandwidthMax %2 (long %1))
    })
 
