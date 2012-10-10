@@ -9,3 +9,4 @@ log
 src/log4j.xml
 *#
 *~
+*target/*

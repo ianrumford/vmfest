@@ -28,7 +28,8 @@ machines are stored in ~/.vmfest/nodes ."
             HostNetworkInterfaceStatus]
            java.io.File
            vmfest.virtualbox.model.Machine)
-  (:import [java.net NetworkInterface InetAddress]))
+  (:import [java.net NetworkInterface InetAddress])
+  )
 
 (defn server
   "Builds a connection definition to the VM Host"
