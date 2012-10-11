@@ -19,7 +19,7 @@
                      [log4j/log4j "1.2.16"]
                      [lein-clojars "0.8.0"]]
   :repositories [["project" "file:repo"]]
-  ;;:aot [#"vmfest"]
+  :aot [#"vmfest.virtualbox.model"]
   :test-selectors {:default (fn [v] (not (:integration v)))
                    :integration :integration
                    :all (fn [_] true)}

@@ -154,7 +154,7 @@
   (cond
    (instance? ClipboardMode clip-mode) (.setClipboardMode vb-m  clip-mode )
 
-   (instance? clojure.lang.Keyword clip-mode)
+   (keyword? clip-mode)
    (if-let [clip-mode-obj (enums/key-to-clipboard-mode clip-mode)]
      (do
        (log/infof "machine/set-clipboard-mode: setting clipboard to %s mode %s" clip-mode clip-mode-obj)
@@ -177,7 +177,7 @@
         boot-position (Integer. boot-pos)
         boot-device-obj (enums/key-to-device-type boot-device)
         ]
-    (log/infof "machine/set-boot-order-function: boot-position %s boot-device %s max-boot-position %s" boot-position boot-device max-boot-position)
+    (log/infof "machine/set-boot-order-function: boot-position %s max-boot-position %s boot-device %s %s" boot-position  max-boot-position boot-device  boot-device-obj)
 
     (if (and (instance? Integer boot-position) (> boot-position 0) (<= boot-position max-boot-position) boot-device-obj)
       (do
@@ -216,9 +216,9 @@
             ]
         (log/infof "machine/set-boot-order: boot position range %s" boot-position-range)
         (doseq  [boot-position-ordinal boot-position-range]
-           (log/infof "machine/set-boot-order: boot position ordinal %s" boot-position-ordinal)
+          (log/infof "machine/set-boot-order: boot position ordinal %s" boot-position-ordinal)
           (if-let [boot-device-obj (get  boot-order-set boot-position-ordinal)]
-            ()
+            (log/infof  "machine/set-boot-order: boot position ordinal %s set already %s" boot-position-ordinal boot-device-obj)
             (do
               (log/infof "machine/set-boot-order: boot position ordinal %s set to null" boot-position-ordinal)
               (set-boot-order-function {} [vb-m max-boot-position [boot-position-ordinal :null]])

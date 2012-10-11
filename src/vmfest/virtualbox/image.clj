@@ -54,7 +54,7 @@
       ;; remain registered
       (.close orig-medium))))
 
-(defn make-temp-dir [image-name]
+(defn make-temp-dir [image-name & temp-dir]
   (let [tmp (System/getProperty "java.io.tmpdir")
         base-path (str tmp java.io.File/separator "vmfest-" image-name)
         base-file (File. base-path)]
@@ -82,20 +82,20 @@
         meta-url (or meta-url
                      (str directory (or meta-file-name
                                         (str image-name ".meta"))))
-        temp-dir (make-temp-dir model-unique-name)
+        real-temp-dir (or temp-dir (make-temp-dir model-unique-name ))
         model-path (or model-path (str (System/getProperty "user.home")
                                      File/separator
                                      ".vmfest/models"))]
     {:image-url image-url
      :image-file-name image-file-name
      :gzipped? gzipped?
-     :gzipped-image-file (str temp-dir File/separator image-file-name)
-     :image-file (str temp-dir File/separator image-name ".vdi")
+     :gzipped-image-file (str real-temp-dir File/separator image-file-name)
+     :image-file (str real-temp-dir File/separator image-name ".vdi")
      :model-name model-name
      :model-path model-path
      :model-file (str model-path File/separator model-unique-name ".vdi")
      :model-meta (str model-path File/separator model-unique-name ".meta")
-     :temp-dir temp-dir
+     :temp-dir real-temp-dir
      :meta meta
      :meta-url (when-not meta meta-url)
      :image-name image-name
@@ -153,6 +153,7 @@
 (defn threaded-cleanup-temp-files
   [{:keys [gzipped-image-file image-file] :as options}]
   (delete-file gzipped-image-file true)
+
   (delete-file image-file true)
   options)
 
