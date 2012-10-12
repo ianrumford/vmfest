@@ -42,7 +42,9 @@ machines are stored in ~/.vmfest/nodes ."
 (defn default-model-path
   "Return the default model-path for images"
   [& {:keys [home] :or {home user-home}}]
-  (.getPath (io/file home ".vmfest" "models")))
+  #_(.getPath (io/file home ".vmfest" "models"))
+  (.getPath (io/file "/mnt/pallet"  "vmfest" "models"))  ;; TEMP for blog post
+  )
 
 (defn default-node-path
   "Return the default node-path for images"
@@ -209,7 +211,13 @@ VirtualBox"
               {:attachment-type :nat}]
     :storage [{:name "IDE Controller"
                :bus :ide
-               :devices [nil nil {:device-type :dvd} nil]}]
+               :devices [nil nil {:device-type :dvd} nil]}
+              {:name "SATA Controller"
+               :bus :sata
+               :devices [nil nil nil nil]
+               }
+
+              ]
     :boot-mount-point ["IDE Controller" 0]}})
 
 (def ^{:dynamic true} *images* nil)
@@ -243,7 +251,7 @@ VirtualBox"
 
 (defn model-info
   [model-key & {:keys [model-path] :or {model-path (:model-path *location*)}}]
-  (model-key (update-models :model-pathmodel-path)))
+  (model-key (update-models :model-path model-path)))
 
 (defn check-model
   [server model-key & {:keys [model-path]
@@ -408,11 +416,17 @@ VirtualBox"
 (defn instance [server name image-key-or-map machine-key-or-map & [base-folder]]
   {:pre [(model/Server? server)]}
   (update-models)
+  (log/infof  "manager/instance: name %s image %s machine %s base folder %s images %s" name image-key-or-map machine-key-or-map base-folder *images*)
   (let [image (if (keyword? image-key-or-map)
                 (image-key-or-map *images*)
                 image-key-or-map)
         config (if (keyword? machine-key-or-map)
-                 (machine-key-or-map *machine-models*)
+                 (if-let [def-machine-model (machine-key-or-map *machine-models*)]
+                   def-machine-model ;; its one of the default ones
+                   (if-let [meta-hardware-models (:hardware-models *images*)]
+                     (machine-key-or-map meta-hardware-models)  ;; defined in a meta?
+                     )
+                   )
                  machine-key-or-map)]
     (when-not image
       (throw (RuntimeException.
@@ -426,6 +440,7 @@ VirtualBox"
                 machine-key-or-map))))
     (log/infof "Instantiating VM with image: %s hardware: %s" image config)
     (instance* server name image config base-folder)))
+
 
 ;;; machine control
 (defn current-time-millis []
