@@ -42,17 +42,12 @@ machines are stored in ~/.vmfest/nodes ."
 (defn default-model-path
   "Return the default model-path for images"
   [& {:keys [home] :or {home user-home}}]
-  #_(.getPath (io/file home ".vmfest" "models"))
-  (.getPath (io/file "/mnt/pallet"  "vmfest" "models"))  ;; TEMP for blog post
-  )
+  (.getPath (io/file home ".vmfest" "models")))
 
 (defn default-node-path
   "Return the default node-path for images"
   [& {:keys [home] :or {home user-home}}]
-  (.getPath (io/file home ".vmfest" "nodes"))
-  #_(.getPath (io/file "/mnt/pallet/virtualbox"  "vmfest" "nodes"))  
-
-  )
+  (.getPath (io/file home ".vmfest" "nodes")))
 
 ;; In the future, vmfest will be able to handle more than just one VM
 ;; host. *locations* will hold the locations. For now, it only holds
